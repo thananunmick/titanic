@@ -60,7 +60,7 @@ def run_kneighbor_clf():
 def run_svc_clf():
     grid_param = {'kernel': ['poly', 'rbf', 'sigmoid'], 'degree': [1, 2, 3, 4, 5, 6, 7, 8]}
     svc_clf = SVC()
-    grid = GridSearchCV(svc_clf, grid_param)
+    grid = GridSearchCV(svc_clf, grid_param, cv=3, scoring="accuracy")
     return grid.fit(X_train_final, y_train)
 
 grid = run_svc_clf()
@@ -102,6 +102,6 @@ prediction = grid.predict(test_final)
 prediction = prediction.reshape(418, 1)
 prediction = np.c_[test_pass_id, prediction]
 prediction = prediction.astype(np.int32)
-np.savetxt("Prediction.csv", prediction, delimiter=",", fmt="%i")
-print(prediction)
+# np.savetxt("Prediction.csv", prediction, delimiter=",", fmt="%i")
+# print(prediction)
 # print(test_final)
