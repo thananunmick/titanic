@@ -12,6 +12,8 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import precision_score, recall_score, precision_recall_curve, roc_auc_score
+from sklearn.metrics import roc_curve
+from sklearn.model_selection import learning_curve
 
 # load training dataset and return it as a pandas dataframe
 def load_train_set():
@@ -59,7 +61,7 @@ def run_kneighbor_clf():
     return grid.fit(X_train_final, y_train)
 
 def run_svc_clf():
-    grid_param = {'kernel': ['poly', 'rbf', 'sigmoid', 'linear'], 'degree': [1, 2, 3, 4, 5, 6, 7, 8, 9]}
+    grid_param = {'kernel': ['poly', 'rbf', 'sigmoid', 'linear'], 'degree': [1, 2, 3, 4, 5, 6, 7, 8, 9], 'C': [1, 0.1, 0.5, 0.01, 0.05]}
     svc_clf = SVC()
     grid = GridSearchCV(svc_clf, grid_param, cv=3, scoring="accuracy")
     return grid.fit(X_train_final, y_train)
@@ -88,10 +90,11 @@ def evaluate():
     print(cross_val_score(model, X_train_final, y_train, cv=3, scoring="accuracy"))
 
     y_pred = cross_val_predict(model, X_train_final, y_train, cv=3)
-    # Printing Precision and Recall score
+    # Printing Precision and Recall score and plot it
     print("Precision score: ", precision_score(y_train, y_pred))
     print("Recall score: ", recall_score(y_train, y_pred))
     precision, recall, thresholds = precision_recall_curve(y_train, y_pred)
+    plt.figure()
     plt.plot(recall, precision, "b-")
     plt.ylabel("Precision")
     plt.xlabel("Recall")
@@ -99,6 +102,27 @@ def evaluate():
     # Compute and print ROC AUC score
     roc_auc = roc_auc_score(y_train, y_pred)
     print("ROC_AUC score: ", roc_auc)
+
+    # Plot ROC curve
+    fpr, tpr, thresholds = roc_curve(y_train, y_pred)
+    plt.figure()
+    plt.plot(fpr, tpr, "b-")
+    plt.ylabel("Sensitivity(TPR)")
+    plt.xlabel("Specificity(FPR)")
+
+    # Plot Learning curve
+    train_sizes, train_scores, test_scores = learning_curve(model, X_train_final, y_train, train_sizes=np.linspace(0.1, 1, 10))
+    plt.figure()
+    train_scores_mean = np.mean(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    plt.plot(train_sizes, train_scores_mean, "b-", label="Train")
+    plt.plot(train_sizes, test_scores_mean, "g-", label="Cross-validation")
+    plt.ylabel("Accuracy")
+    plt.xlabel("# of Training Examples")
+
+    # print("Train_sizes: ", train_sizes)
+    # print("Train_score: ", train_scores)
+    # print("Test_score: ", test_scores)
 
 evaluate()
 
