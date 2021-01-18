@@ -14,6 +14,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import precision_score, recall_score, precision_recall_curve, roc_auc_score
 from sklearn.metrics import roc_curve
 from sklearn.model_selection import learning_curve
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.ensemble import VotingClassifier
 
 # load training dataset and return it as a pandas dataframe
 def load_train_set():
@@ -55,41 +58,77 @@ X_train_final = scaler.fit_transform(X_train_final)
 
 # Choose KNeighborsClassifier as the model to train the training dataset
 def run_kneighbor_clf():
-    grid_param = {'n_neighbors': [1, 2, 3, 4, 5, 6, 7, 8, 9], 'weights': ['uniform', 'distance']}
-    knn_clf = KNeighborsClassifier()
-    grid = GridSearchCV(knn_clf, grid_param)
-    return grid.fit(X_train_final, y_train)
+    # grid_param = {'n_neighbors': [1, 2, 3, 4, 5, 6, 7, 8, 9], 'weights': ['uniform', 'distance']}
+    knn_clf = KNeighborsClassifier(n_neighbors=10)
+    # grid = GridSearchCV(knn_clf, grid_param)
+    # return grid.fit(X_train_final, y_train)
+    return knn_clf
 
 def run_svc_clf():
-    grid_param = {'kernel': ['poly', 'rbf', 'sigmoid', 'linear'], 'degree': [1, 2, 3, 4, 5, 6, 7, 8, 9], 'C': [1, 0.1, 0.5, 0.01, 0.05]}
-    svc_clf = SVC()
-    grid = GridSearchCV(svc_clf, grid_param, cv=3, scoring="accuracy")
-    return grid.fit(X_train_final, y_train)
+    # grid_param = {'kernel': ['poly', 'rbf', 'sigmoid', 'linear'], 'degree': [1, 2, 3, 4, 5, 6, 7, 8, 9], 'C': [1, 0.1, 0.5, 0.01, 0.05]}
+    svc_clf = SVC(degree=1, C=0.25, probability=True)
+    # grid = GridSearchCV(svc_clf, grid_param, cv=3, scoring="accuracy")
+    # return grid.fit(X_train_final, y_train)
+    return svc_clf
 
 def run_log_reg_clf():
-    log_reg = LogisticRegression(penalty='l2', C=50)
-    return log_reg.fit(X_train_final, y_train)
+    log_reg = LogisticRegression(C=0.25)
+    # return log_reg.fit(X_train_final, y_train)
+    return log_reg
+
+def run_rnd_clf():
+    grid_param = {}
+    rnd_clf = RandomForestClassifier(n_jobs=-1, bootstrap=True, oob_score=True, max_depth=4, n_estimators=60, max_leaf_nodes=17)
+    # grid = GridSearchCV(rnd_clf, grid_param, scoring="accuracy")
+    # return rnd_clf.fit(X_train_final, y_train)
+    return rnd_clf
+
+def run_voting_clf():
+    knn_clf = run_kneighbor_clf()
+    svc_clf = run_svc_clf()
+    log_reg = run_log_reg_clf()
+    rnd_clf = run_rnd_clf()
+
+    voting_clf = VotingClassifier(
+        estimators=[
+            ('knn', knn_clf),
+            ('svc', svc_clf),
+            ('log', log_reg),
+            ('rnd', rnd_clf),
+        ],
+        voting="soft",
+        # verbose=True
+    )
+
+    return voting_clf.fit(X_train_final, y_train)
 
 # Main train function
 def train():
     # model = run_kneighbor_clf()
-    model = run_svc_clf()
+    # model = run_svc_clf()
     # model = run_log_reg_clf()
+    # model = run_rnd_clf()
+    model = run_voting_clf()
     return model
 
 model = train()
 
 print("Done Training")
-print(model.best_estimator_)
+# print(model.best_estimator_)
+# print("Accuracy score:", model.oob_score_)
+# print("Feature Importances:", model.feature_importances_)
 
 # print(y_train.value_counts())
 
 # Evaluation
 def evaluate():
-    # Use CrossValScore to test the accruacy of the model
-    print(cross_val_score(model, X_train_final, y_train, cv=3, scoring="accuracy"))
+    print("Evaluation for", model.__class__.__name__)
 
-    y_pred = cross_val_predict(model, X_train_final, y_train, cv=3)
+    # Use CrossValScore to test the accruacy of the model
+    print(cross_val_score(model, X_train_final, y_train, cv=2, scoring="accuracy"))
+
+    y_pred = cross_val_predict(model, X_train_final, y_train, cv=2)
+
     # Printing Precision and Recall score and plot it
     print("Precision score: ", precision_score(y_train, y_pred))
     print("Recall score: ", recall_score(y_train, y_pred))
@@ -160,6 +199,8 @@ def run_test_set():
     prediction = prediction.reshape(418, 1)
     prediction = np.c_[test_pass_id, prediction]
     prediction = prediction.astype(np.int32)
-    # np.savetxt("Prediction.csv", prediction, delimiter=",", fmt="%i")
-    # print(prediction)
+    np.savetxt("Prediction.csv", prediction, delimiter=",", fmt="%i")
+    print(prediction)
     # print(test_final)
+
+run_test_set()
